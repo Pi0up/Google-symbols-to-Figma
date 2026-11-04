@@ -70,15 +70,19 @@
       <!-- Color Variable Option (Optional) -->
       <div class="section-box">
         <div class="section-header-row">
-          <div class="section-title" style="margin-bottom: 0;">Variable de couleur</div>
-          <span class="badge-optional">Optionnel</span>
+          <div class="section-title" style="margin-bottom: 0;">Variable ou Style de couleur</div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button id="btnRefreshVariables" class="btn-link" type="button" title="Actualiser la liste des tokens de couleur">↻ Actualiser</button>
+            <span class="badge-optional">Optionnel</span>
+          </div>
         </div>
         <p class="section-hint" style="margin-top: 4px; margin-bottom: 8px;">
-          Lier une variable de couleur Figma aux icônes importées ou mises à jour.
+          Lier un token Figma (variable locale ou de bibliothèque liée, ou style de couleur) aux icônes.
         </p>
         <select id="colorVariableSelect" class="select-input">
           <option value="">Aucune variable (couleur par défaut #1C1C1E)</option>
         </select>
+        <div id="variableCountHint" style="font-size: 11px; margin-top: 5px; line-height: 1.4;"></div>
         <input
           type="text"
           id="customVariableInput"

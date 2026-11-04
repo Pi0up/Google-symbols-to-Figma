@@ -120,6 +120,13 @@ window.onmessage = (event) => {
       break;
     }
 
+    case 'VARIABLES_LOADED': {
+      if (msg.payload.colorVariables) {
+        populateColorVariables(msg.payload.colorVariables);
+      }
+      break;
+    }
+
     case 'SYNC_PROGRESS': {
       const { current, total, iconName } = msg.payload;
       const pct = Math.round((current / total) * 100);
@@ -507,6 +514,8 @@ function populateColorVariables(variables: ColorVariableItem[]) {
   const currentVal = colorVariableSelect.value;
   colorVariableSelect.innerHTML = '<option value="">Aucune variable (couleur par défaut #1C1C1E)</option>';
 
+  const hintEl = document.getElementById('variableCountHint');
+
   if (variables && variables.length > 0) {
     const byCollection = new Map<string, ColorVariableItem[]>();
     for (const v of variables) {
@@ -525,6 +534,14 @@ function populateColorVariables(variables: ColorVariableItem[]) {
         group.appendChild(opt);
       }
       colorVariableSelect.appendChild(group);
+    }
+
+    if (hintEl) {
+      hintEl.innerHTML = `<span style="color: var(--success, #34c759)">✓ ${variables.length} token(s) disponible(s)</span>`;
+    }
+  } else {
+    if (hintEl) {
+      hintEl.innerHTML = `<span style="color: var(--text-secondary)">ℹ️ 0 token détecté. Si vos variables sont dans un autre fichier, vérifiez que la bibliothèque est bien publiée et activée dans <strong>Assets > Libraries</strong> (icône livre 📚).</span>`;
     }
   }
 
@@ -554,6 +571,17 @@ colorVariableSelect.addEventListener('change', () => {
     customVariableInput.style.display = 'none';
   }
 });
+
+const btnRefreshVariables = document.getElementById('btnRefreshVariables');
+if (btnRefreshVariables) {
+  btnRefreshVariables.addEventListener('click', () => {
+    const hintEl = document.getElementById('variableCountHint');
+    if (hintEl) {
+      hintEl.innerHTML = '<span style="color: var(--text-secondary)">Scan des tokens en cours...</span>';
+    }
+    sendToFigma({ type: 'REFRESH_VARIABLES' });
+  });
+}
 
 // Kick off
 init();

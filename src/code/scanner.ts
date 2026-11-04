@@ -1,62 +1,89 @@
 import { ExistingIconRecord, ColorVariableItem } from '../types';
 
 export async function fetchColorVariables(): Promise<ColorVariableItem[]> {
+  const results: ColorVariableItem[] = [];
+
+  // 1. Récupération des variables locales Figma
   try {
-    if (!('variables' in figma) || !figma.variables.getLocalVariablesAsync) {
-      return [];
-    }
+    if ('variables' in figma && figma.variables.getLocalVariablesAsync) {
+      const [colorVars, collections] = await Promise.all([
+        figma.variables.getLocalVariablesAsync('COLOR'),
+        figma.variables.getLocalVariableCollectionsAsync(),
+      ]);
 
-    const results: ColorVariableItem[] = [];
-
-    // 1. Récupération des variables locales
-    const [colorVars, collections] = await Promise.all([
-      figma.variables.getLocalVariablesAsync('COLOR'),
-      figma.variables.getLocalVariableCollectionsAsync(),
-    ]);
-
-    const collectionMap = new Map<string, string>();
-    for (const c of collections) {
-      collectionMap.set(c.id, c.name);
-    }
-
-    for (const v of colorVars) {
-      results.push({
-        id: v.id,
-        name: v.name,
-        collectionName: `Locales • ${collectionMap.get(v.variableCollectionId) || 'Variables'}`,
-      });
-    }
-
-    // 2. Récupération des variables provenant de bibliothèques d'équipe activées / liées au document
-    if ('teamLibrary' in figma && figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync) {
-      try {
-        const libraryCollections = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
-        for (const libCol of libraryCollections) {
-          try {
-            const libVars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(libCol.key);
-            for (const v of libVars) {
-              if (v.resolvedType === 'COLOR') {
-                results.push({
-                  id: v.key, // Pour une variable de bibliothèque liée, la clé est utilisée pour l'import via importVariableByKeyAsync
-                  name: v.name,
-                  collectionName: `${libCol.libraryName} • ${libCol.name}`,
-                });
-              }
-            }
-          } catch (colErr) {
-            console.warn(`Could not load variables for library collection "${libCol.name}":`, colErr);
-          }
-        }
-      } catch (libErr) {
-        console.warn('Could not load available library variable collections:', libErr);
+      const collectionMap = new Map<string, string>();
+      for (const c of collections) {
+        collectionMap.set(c.id, c.name);
       }
-    }
 
-    return results;
+      for (const v of colorVars) {
+        results.push({
+          id: v.id,
+          name: v.name,
+          collectionName: `Variables locales • ${collectionMap.get(v.variableCollectionId) || 'Variables'}`,
+          type: 'variable',
+        });
+      }
+      console.log(`[Figma Sync] Variables locales trouvées : ${colorVars.length}`);
+    }
   } catch (err) {
-    console.warn('Could not fetch local color variables:', err);
-    return [];
+    console.warn('[Figma Sync] Erreur lors de la récupération des variables locales :', err);
   }
+
+  // 2. Récupération des variables provenant de bibliothèques d'équipe activées / liées au document
+  try {
+    if ('teamLibrary' in figma && figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync) {
+      const libraryCollections = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
+      console.log(`[Figma Sync] Collections de bibliothèque liées trouvées : ${libraryCollections.length}`);
+
+      const collectionPromises = libraryCollections.map(async (libCol) => {
+        try {
+          const libVars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(libCol.key);
+          return libVars
+            .filter((v) => v.resolvedType === 'COLOR')
+            .map((v) => ({
+              id: v.key,
+              name: v.name,
+              collectionName: `${libCol.libraryName} • ${libCol.name}`,
+              type: 'variable' as const,
+            }));
+        } catch (colErr) {
+          console.warn(`[Figma Sync] Erreur de lecture de la collection "${libCol.name}" :`, colErr);
+          return [];
+        }
+      });
+
+      const libResults = await Promise.all(collectionPromises);
+      for (const items of libResults) {
+        results.push(...items);
+      }
+    } else {
+      console.log('[Figma Sync] figma.teamLibrary non disponible.');
+    }
+  } catch (libErr) {
+    console.warn('[Figma Sync] Erreur lors de l\'accès à figma.teamLibrary :', libErr);
+  }
+
+  // 3. Récupération des styles de couleur locaux (Figma PaintStyles)
+  try {
+    if ('getLocalPaintStyles' in figma) {
+      const paintStyles = figma.getLocalPaintStyles();
+      for (const style of paintStyles) {
+        results.push({
+          id: `style:${style.id}`,
+          name: style.name,
+          collectionName: 'Styles de couleur (Paint Styles)',
+          type: 'style',
+        });
+      }
+      console.log(`[Figma Sync] Styles de couleur locaux trouvés : ${paintStyles.length}`);
+    }
+  } catch (styleErr) {
+    console.warn('[Figma Sync] Erreur lors de la récupération des styles de couleur :', styleErr);
+  }
+
+  console.log(`[Figma Sync] Total tokens de couleur détectés : ${results.length}`);
+  return results;
 }
 
 export function scanExistingIcons(): ExistingIconRecord[] {

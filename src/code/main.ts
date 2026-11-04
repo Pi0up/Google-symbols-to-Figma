@@ -40,6 +40,15 @@ figma.ui.onmessage = async (msg: UIMessage) => {
       break;
     }
 
+    case 'REFRESH_VARIABLES': {
+      const colorVariables = await fetchColorVariables();
+      postMessage({
+        type: 'VARIABLES_LOADED',
+        payload: { colorVariables },
+      });
+      break;
+    }
+
     case 'CANCEL_SYNC': {
       isCancelled = true;
       break;
@@ -56,29 +65,51 @@ figma.ui.onmessage = async (msg: UIMessage) => {
 
       if (isFirst || !activeBuilder) {
         let targetColorVar: Variable | null = null;
+        let targetPaintStyle: PaintStyle | null = null;
         const varId = config?.colorVariableId;
-        if (varId && 'variables' in figma) {
-          try {
-            if (figma.variables.getVariableByIdAsync) {
-              targetColorVar = await figma.variables.getVariableByIdAsync(varId);
-            }
-          } catch {
-            // Fallback if ID didn't match directly
-          }
 
-          if (!targetColorVar && figma.variables.importVariableByKeyAsync) {
+        if (varId) {
+          if (varId.startsWith('style:')) {
+            const styleId = varId.replace('style:', '');
             try {
-              targetColorVar = await figma.variables.importVariableByKeyAsync(varId);
+              if (figma.getStyleByIdAsync) {
+                const style = await figma.getStyleByIdAsync(styleId);
+                if (style && style.type === 'PAINT') {
+                  targetPaintStyle = style as PaintStyle;
+                }
+              } else {
+                const style = figma.getStyleById(styleId);
+                if (style && style.type === 'PAINT') {
+                  targetPaintStyle = style as PaintStyle;
+                }
+              }
+            } catch (err) {
+              console.warn('Could not find paint style by id:', styleId, err);
+            }
+          } else if ('variables' in figma) {
+            try {
+              if (figma.variables.getVariableByIdAsync) {
+                targetColorVar = await figma.variables.getVariableByIdAsync(varId);
+              }
             } catch {
-              console.warn('Could not import color variable by key:', varId);
+              // Fallback if ID didn't match directly
+            }
+
+            if (!targetColorVar && figma.variables.importVariableByKeyAsync) {
+              try {
+                targetColorVar = await figma.variables.importVariableByKeyAsync(varId);
+              } catch {
+                console.warn('Could not import color variable by key:', varId);
+              }
             }
           }
 
-          if (!targetColorVar) {
-            figma.notify('Attention : la variable de couleur sélectionnée n\'a pas pu être résolue ou importée.', { error: true });
+          if (!targetColorVar && !targetPaintStyle) {
+            figma.notify('Attention : la variable ou le style de couleur sélectionné n\'a pas pu être résolu.', { error: true });
           }
         }
-        activeBuilder = new LibraryBuilder(targetColorVar);
+
+        activeBuilder = new LibraryBuilder(targetColorVar, targetPaintStyle);
         sessionStats = { added: 0, updated: 0, totalProcessed: 0 };
       }
 
