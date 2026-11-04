@@ -10,26 +10,26 @@ Plugin Figma professionnel conçu pour générer, organiser et synchroniser en c
 
 ---
 
-## 🌟 Points forts
+## Points forts
 
-- 🔄 **Synchronisation incrémentale non-destructive** :
+- **Synchronisation incrémentale non-destructive** :
   - Met à jour les tracés vectoriels (`vectorNetwork`) des icônes modifiées par Google **sans jamais détruire les composants ni briser les instances existantes**.
   - Préserve vos overrides (couleurs personnalisées, structure de calques, contraintes).
   - Détecte et conserve les icônes retirées par Google en les marquant avec le libellé `[Deprecated]`.
-- 🎨 **Liaison automatique des Tokens & Variables de couleur** :
+- **Liaison automatique des Tokens & Variables de couleur** :
   - Détection automatique des variables de couleur locales du fichier.
   - Détection et support complet des **bibliothèques d'équipe liées (Team Libraries)**.
   - Saisie manuelle possible par clé ou ID de variable Figma.
   - Application automatique du token de couleur (`setBoundVariable`) sur les tracés vectoriels lors de la création et de la mise à jour.
-- 🧩 **Structure de composants et variantes complète** :
+-  **Structure de composants et variantes complète** :
   - Génère 1 `ComponentSet` par icône avec ses propriétés de variantes :
     - `Style` : `Outlined`, `Rounded`, `Sharp`
     - `Fill` : `False` (contour) et `True` (plein)
   - Cadre normalisé 24×24 px avec redimensionnement automatique et contraintes centrées.
-- 📂 **Organisation intelligente en Sections** :
+-  **Organisation intelligente en Sections** :
   - Regroupe automatiquement les icônes dans des `Sections` Figma étiquetées selon les catégories Google (*Action*, *Communication*, *Audio & Video*, *Device*, etc.).
   - Mise en page automatique en grille propre et aérée.
-- 📊 **Tableau de bord interactif & Filtres précis** :
+-  **Tableau de bord interactif & Filtres précis** :
   - Analyse différentielle en direct entre le catalogue distant Google Fonts et la page Figma active (Nouveaux, Modifiés, À jour, Dépréciés).
   - Filtrage granulaire par styles, état Fill et catégories (recherche rapide intégrée).
   - Choix du périmètre : *Uniquement les nouveautés et modifications* (recommandé) ou *Synchronisation complète forcée*.
@@ -58,7 +58,7 @@ Les métadonnées (nom officiel, catégorie, version distante, statut) sont stoc
 
 ---
 
-## 🚀 Installation dans Figma (Mode Développement)
+##  Installation dans Figma (Mode Développement)
 
 1. **Prérequis** :
    - [Node.js](https://nodejs.org/) (version 18 ou supérieure recommandée).
@@ -83,7 +83,7 @@ Les métadonnées (nom officiel, catégorie, version distante, statut) sont stoc
 
 ---
 
-## 📖 Guide d'utilisation
+##  Guide d'utilisation
 
 1. **Analyse initiale** :
    - Au lancement, le plugin analyse automatiquement la page active et interroge l'API Google Fonts pour calculer le différentiel.
@@ -151,7 +151,7 @@ Google-symbols-to-Figma/
 
 ---
 
-## 🤝 Directives Git et Contribution
+##  Directives Git et Contribution
 
 Le projet applique une politique stricte de versionnement et de qualité logicielle (voir [AGENTS.md](AGENTS.md) et [GIT_GUIDELINES.md](GIT_GUIDELINES.md)) :
 
@@ -165,6 +165,6 @@ Le projet applique une politique stricte de versionnement et de qualité logicie
 
 ---
 
-## 📄 Licence
+##  Licence
 
 Ce projet est distribué sous licence **GPL-3.0**. Consultez le fichier [LICENSE](LICENSE) pour plus d'informations.
