@@ -41,6 +41,7 @@ export interface ExistingIconRecord {
   category: string;
   version: number;
   isDeprecated?: boolean;
+  importedAt?: number;
 }
 
 export type IconDiffStatus = 'new' | 'modified' | 'up_to_date' | 'deprecated';
@@ -51,6 +52,8 @@ export interface IconDiffItem {
   status: IconDiffStatus;
   remoteVersion: number;
   localVersion?: number;
+  importedAt?: number;
+  isFresh?: boolean;
   tags: string[];
 }
 
@@ -110,7 +113,16 @@ export type PluginMessage =
       };
     }
   | { type: 'VARIABLES_LOADED'; payload: { colorVariables: ColorVariableItem[] } }
-  | { type: 'SYNC_PROGRESS'; payload: { current: number; total: number; iconName: string } }
+  | {
+      type: 'SYNC_PROGRESS';
+      payload: {
+        current: number;
+        total: number;
+        iconName: string;
+        category?: string;
+        action?: 'created' | 'updated';
+      };
+    }
   | { type: 'BATCH_COMPLETE'; payload: { batchIndex: number; added: number; updated: number } }
   | { type: 'SYNC_COMPLETE'; payload: { added: number; updated: number; deprecated: number } }
   | { type: 'SYNC_ERROR'; payload: { message: string } };

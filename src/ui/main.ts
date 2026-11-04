@@ -20,16 +20,39 @@ let isSyncing = false;
 let shouldCancel = false;
 let currentBatchResolver: (() => void) | null = null;
 
-// DOM Elements
+export interface FailedIconItem {
+  name: string;
+  category: string;
+  remoteVersion: number;
+  reason: string;
+}
+
+let failedIcons: FailedIconItem[] = [];
+let liveStats = {
+  added: 0,
+  updated: 0,
+  fresh: 0,
+  errors: 0,
+};
+
+// DOM Elements - Navigation & Views
 const loadingView = document.getElementById('loadingView') as HTMLElement;
 const dashboardView = document.getElementById('dashboardView') as HTMLElement;
+const syncView = document.getElementById('syncView') as HTMLElement;
 const pageBadge = document.getElementById('pageBadge') as HTMLElement;
+const footerElement = document.querySelector('.footer') as HTMLElement;
 
+// Freshness Banner
+const freshnessNotice = document.getElementById('freshnessNotice') as HTMLElement;
+const freshnessText = document.getElementById('freshnessText') as HTMLElement;
+
+// Dashboard Stat Counters
 const statNew = document.getElementById('statNew') as HTMLElement;
 const statModified = document.getElementById('statModified') as HTMLElement;
 const statUpToDate = document.getElementById('statUpToDate') as HTMLElement;
 const statDeprecated = document.getElementById('statDeprecated') as HTMLElement;
 
+// Dashboard Options
 const checkOutlined = document.getElementById('checkOutlined') as HTMLInputElement;
 const checkRounded = document.getElementById('checkRounded') as HTMLInputElement;
 const checkSharp = document.getElementById('checkSharp') as HTMLInputElement;
@@ -44,36 +67,39 @@ const tokenPickerDropdown = document.getElementById('tokenPickerDropdown') as HT
 const tokenSearchInput = document.getElementById('tokenSearchInput') as HTMLInputElement;
 const tokenPickerList = document.getElementById('tokenPickerList') as HTMLElement;
 
-// Error report elements
-const errorReportBox = document.getElementById('errorReportBox') as HTMLElement;
-const errorReportCount = document.getElementById('errorReportCount') as HTMLElement;
-const errorReportList = document.getElementById('errorReportList') as HTMLElement;
-const btnCloseErrorReport = document.getElementById('btnCloseErrorReport') as HTMLButtonElement;
-const btnRetryErrors = document.getElementById('btnRetryErrors') as HTMLButtonElement;
-const btnRetryText = document.getElementById('btnRetryText') as HTMLElement;
-const btnCopyErrors = document.getElementById('btnCopyErrors') as HTMLButtonElement;
-
-export interface FailedIconItem {
-  name: string;
-  category: string;
-  remoteVersion: number;
-  reason: string;
-}
-
-let failedIcons: FailedIconItem[] = [];
-
 const categorySearch = document.getElementById('categorySearch') as HTMLInputElement;
 const categoryList = document.getElementById('categoryList') as HTMLElement;
 const btnSelectAllCats = document.getElementById('btnSelectAllCats') as HTMLButtonElement;
 const btnDeselectAllCats = document.getElementById('btnDeselectAllCats') as HTMLButtonElement;
 
-const progressBox = document.getElementById('progressBox') as HTMLElement;
-const progressStatusText = document.getElementById('progressStatusText') as HTMLElement;
-const progressPercent = document.getElementById('progressPercent') as HTMLElement;
-const progressBarFill = document.getElementById('progressBarFill') as HTMLElement;
-const currentIconName = document.getElementById('currentIconName') as HTMLElement;
-const btnCancelSync = document.getElementById('btnCancelSync') as HTMLButtonElement;
+// Sync View Elements
+const syncStatusIndicator = document.getElementById('syncStatusIndicator') as HTMLElement;
+const syncTitle = document.getElementById('syncTitle') as HTMLElement;
+const syncSubtitle = document.getElementById('syncSubtitle') as HTMLElement;
+const syncPhaseBadge = document.getElementById('syncPhaseBadge') as HTMLElement;
+const syncProgressCount = document.getElementById('syncProgressCount') as HTMLElement;
+const syncProgressPercent = document.getElementById('syncProgressPercent') as HTMLElement;
+const syncProgressBarFill = document.getElementById('syncProgressBarFill') as HTMLElement;
+const syncBatchStatus = document.getElementById('syncBatchStatus') as HTMLElement;
+const syncCountNew = document.getElementById('syncCountNew') as HTMLElement;
+const syncCountUpdated = document.getElementById('syncCountUpdated') as HTMLElement;
+const syncCountFresh = document.getElementById('syncCountFresh') as HTMLElement;
+const syncCountErrors = document.getElementById('syncCountErrors') as HTMLElement;
+const syncCurrentAction = document.getElementById('syncCurrentAction') as HTMLElement;
+const syncCurrentIconName = document.getElementById('syncCurrentIconName') as HTMLElement;
+const syncCurrentCategory = document.getElementById('syncCurrentCategory') as HTMLElement;
+const syncLogList = document.getElementById('syncLogList') as HTMLElement;
 
+// Sync Error Report & Controls
+const syncErrorReportBox = document.getElementById('syncErrorReportBox') as HTMLElement;
+const syncErrorReportCount = document.getElementById('syncErrorReportCount') as HTMLElement;
+const syncErrorReportList = document.getElementById('syncErrorReportList') as HTMLElement;
+const btnSyncRetryErrors = document.getElementById('btnSyncRetryErrors') as HTMLButtonElement;
+const btnSyncCopyErrors = document.getElementById('btnSyncCopyErrors') as HTMLButtonElement;
+const btnSyncCancel = document.getElementById('btnSyncCancel') as HTMLButtonElement;
+const btnSyncDone = document.getElementById('btnSyncDone') as HTMLButtonElement;
+
+// Main Dashboard Buttons
 const btnSync = document.getElementById('btnSync') as HTMLButtonElement;
 const btnSyncSpinner = document.getElementById('btnSyncSpinner') as HTMLElement;
 const btnSyncText = document.getElementById('btnSyncText') as HTMLElement;
@@ -110,6 +136,45 @@ async function init() {
   }
 }
 
+function appendSyncLog(
+  iconName: string,
+  category: string,
+  type: 'created' | 'updated' | 'error',
+  detail?: string
+) {
+  const row = document.createElement('div');
+  row.className = 'sync-log-item';
+
+  const left = document.createElement('div');
+  left.className = 'sync-log-left';
+
+  const nameSpan = document.createElement('span');
+  nameSpan.className = 'sync-log-icon-name';
+  nameSpan.textContent = iconName;
+
+  const catSpan = document.createElement('span');
+  catSpan.style.color = 'var(--text-secondary)';
+  catSpan.textContent = `(${category})`;
+
+  left.appendChild(nameSpan);
+  left.appendChild(catSpan);
+
+  const badge = document.createElement('span');
+  badge.className = `sync-log-badge ${type}`;
+  if (type === 'created') {
+    badge.textContent = '+ Créé';
+  } else if (type === 'updated') {
+    badge.textContent = '↻ Mis à jour';
+  } else {
+    badge.textContent = '✕ Échec';
+    if (detail) badge.title = detail;
+  }
+
+  row.appendChild(left);
+  row.appendChild(badge);
+  syncLogList.prepend(row);
+}
+
 // Handle messages from Figma sandbox
 window.onmessage = (event) => {
   const msg: PluginMessage = event.data.pluginMessage;
@@ -134,11 +199,24 @@ window.onmessage = (event) => {
     }
 
     case 'SYNC_PROGRESS': {
-      const { current, total, iconName } = msg.payload;
-      const pct = Math.round((current / total) * 100);
-      progressPercent.textContent = `${pct}% (${current}/${total})`;
-      progressBarFill.style.width = `${pct}%`;
-      currentIconName.textContent = `Écriture dans Figma : ${iconName}`;
+      const { current, total, iconName, category, action } = msg.payload;
+      const pct = total > 0 ? Math.round((current / total) * 100) : 0;
+      syncProgressPercent.textContent = `${pct}%`;
+      syncProgressBarFill.style.width = `${pct}%`;
+      syncProgressCount.textContent = `${current} / ${total}`;
+      syncCurrentAction.textContent = 'Écriture dans Figma :';
+      syncCurrentIconName.textContent = iconName;
+      syncCurrentCategory.textContent = category || 'General';
+
+      if (action === 'created') {
+        liveStats.added++;
+        syncCountNew.textContent = `+${liveStats.added}`;
+        appendSyncLog(iconName, category || 'General', 'created');
+      } else if (action === 'updated') {
+        liveStats.updated++;
+        syncCountUpdated.textContent = String(liveStats.updated);
+        appendSyncLog(iconName, category || 'General', 'updated');
+      }
       break;
     }
 
@@ -156,8 +234,6 @@ window.onmessage = (event) => {
         currentBatchResolver = null;
       }
       finishSync();
-      // Re-scan page to update diff state
-      sendToFigma({ type: 'SCAN_PAGE' });
       break;
     }
 
@@ -166,8 +242,7 @@ window.onmessage = (event) => {
         currentBatchResolver();
         currentBatchResolver = null;
       }
-      alert(`Erreur de synchronisation : ${msg.payload.message}`);
-      finishSync();
+      finishSync(msg.payload.message);
       break;
     }
   }
@@ -181,11 +256,20 @@ function renderDashboard() {
   statUpToDate.textContent = String(diffSummary.upToDateCount);
   statDeprecated.textContent = String(diffSummary.deprecatedCount);
 
+  if (diffSummary.freshCount > 0) {
+    freshnessNotice.style.display = 'flex';
+    freshnessText.textContent = `${diffSummary.freshCount} icône(s) importée(s) il y a moins de 24h (fraîcheur garantie, non retéléchargées).`;
+  } else {
+    freshnessNotice.style.display = 'none';
+  }
+
   renderCategoryCheckboxes();
   updateSyncButton();
 
   loadingView.style.display = 'none';
+  syncView.style.display = 'none';
   dashboardView.style.display = 'flex';
+  footerElement.style.display = 'flex';
 }
 
 function getSelectedStyles(): StyleKey[] {
@@ -260,24 +344,45 @@ function updateSyncButton() {
     return;
   }
 
-  // Filter items matching selected categories and scope
+  // Filter items matching selected categories and scope, en EXCLUANT strictement les icônes fraîches (< 24h)
   const targetItems = diffSummary.items.filter((item) => {
     if (!selectedCats.has(item.category)) return false;
+    if (item.isFresh) return false; // Ne jamais retélécharger une icône de moins de 24h !
     if (scope === 'updates_only') {
       return item.status === 'new' || item.status === 'modified';
     }
-    return true; // all selected
+    return true; // all selected non-fresh
   });
 
   btnSync.disabled = targetItems.length === 0;
   if (targetItems.length === 0) {
-    btnSyncText.textContent = 'Tout est déjà à jour !';
+    if (diffSummary.freshCount > 0) {
+      btnSyncText.textContent = 'Tout est déjà à jour (< 24h) !';
+    } else {
+      btnSyncText.textContent = 'Tout est déjà à jour !';
+    }
   } else {
-    btnSyncText.textContent = `Synchroniser (${targetItems.length} icônes)`;
+    const newCount = targetItems.filter((i) => i.status === 'new').length;
+    const updateCount = targetItems.filter((i) => i.status !== 'new').length;
+
+    if (newCount > 0 && updateCount > 0) {
+      btnSyncText.textContent = `Synchroniser (${newCount} manquantes prioritaires + ${updateCount} màj)`;
+    } else if (newCount > 0) {
+      btnSyncText.textContent = `Synchroniser (${newCount} icônes manquantes)`;
+    } else {
+      btnSyncText.textContent = `Synchroniser (${updateCount} icônes à mettre à jour)`;
+    }
   }
 }
 
-// Start synchronization
+interface SyncTarget {
+  name: string;
+  category: string;
+  status: 'new' | 'modified' | 'up_to_date' | 'deprecated';
+  remoteVersion: number;
+}
+
+// Start synchronization with dedicated Sync View & Missing-First Priority
 async function startSync(retryList?: FailedIconItem[]) {
   if (isSyncing) return;
 
@@ -287,26 +392,24 @@ async function startSync(retryList?: FailedIconItem[]) {
   const scopeRadio = document.querySelector<HTMLInputElement>('input[name="syncScope"]:checked');
   const scope = scopeRadio ? scopeRadio.value : 'updates_only';
 
-  interface SyncTarget {
-    name: string;
-    category: string;
-    remoteVersion: number;
-  }
-
   let targetDiffItems: SyncTarget[] = [];
 
   if (retryList && retryList.length > 0) {
     targetDiffItems = retryList.map((r) => ({
       name: r.name,
       category: r.category,
+      status: 'new',
       remoteVersion: r.remoteVersion,
     }));
-    errorReportBox.style.display = 'none';
+    failedIcons = [];
   } else {
     if (!diffSummary) return;
+
+    // 1. Filtrer les icônes éligibles (excluant strictement les fraîches < 24h)
     targetDiffItems = diffSummary.items
       .filter((item) => {
         if (!selectedCats.has(item.category)) return false;
+        if (item.isFresh) return false; // Règle 24h : aucun retéléchargement d'icône récente
         if (scope === 'updates_only') {
           return item.status === 'new' || item.status === 'modified';
         }
@@ -315,10 +418,21 @@ async function startSync(retryList?: FailedIconItem[]) {
       .map((item) => ({
         name: item.name,
         category: item.category,
+        status: item.status,
         remoteVersion: item.remoteVersion,
       }));
+
+    // 2. Règle de priorité : les icônes absentes du doc ('new') sont chargées et injectées EN PREMIER !
+    targetDiffItems.sort((a, b) => {
+      const aNew = a.status === 'new' ? 0 : 1;
+      const bNew = b.status === 'new' ? 0 : 1;
+      if (aNew !== bNew) return aNew - bNew; // 'new' en tête
+      const catComp = a.category.localeCompare(b.category);
+      if (catComp !== 0) return catComp;
+      return a.name.localeCompare(b.name);
+    });
+
     failedIcons = [];
-    errorReportBox.style.display = 'none';
   }
 
   if (targetDiffItems.length === 0) return;
@@ -326,18 +440,52 @@ async function startSync(retryList?: FailedIconItem[]) {
   isSyncing = true;
   shouldCancel = false;
 
-  btnSync.disabled = true;
-  btnRefresh.disabled = true;
-  btnSyncSpinner.style.display = 'inline-block';
-  btnSyncText.textContent = 'Synchronisation en cours...';
+  const total = targetDiffItems.length;
+  const missingCount = targetDiffItems.filter((i) => i.status === 'new').length;
+  const updateCount = total - missingCount;
 
-  progressBox.style.display = 'flex';
-  progressBarFill.style.width = '0%';
-  progressPercent.textContent = `0% (0/${targetDiffItems.length})`;
-  progressStatusText.textContent = 'Téléchargement des fichiers vectoriels...';
+  // Réinitialiser les compteurs de session
+  liveStats = {
+    added: 0,
+    updated: 0,
+    fresh: diffSummary?.freshCount || 0,
+    errors: 0,
+  };
+
+  // Basculer vers la vue spécifique de synchronisation
+  dashboardView.style.display = 'none';
+  footerElement.style.display = 'none';
+  syncView.style.display = 'flex';
+
+  syncStatusIndicator.className = 'sync-pulsing-dot';
+  syncTitle.textContent = 'Synchronisation en cours';
+  syncSubtitle.textContent = missingCount > 0
+    ? `Priorité aux ${missingCount} icône(s) manquante(s) dans le document.`
+    : `Mise à jour de ${updateCount} icône(s) existante(s).`;
+
+  syncPhaseBadge.textContent = missingCount > 0 ? 'Priorité : Icônes manquantes' : 'Mise à jour des icônes';
+  syncPhaseBadge.className = `sync-phase-badge ${missingCount > 0 ? '' : 'phase-updates'}`;
+
+  syncProgressCount.textContent = `0 / ${total}`;
+  syncProgressPercent.textContent = '0%';
+  syncProgressBarFill.style.width = '0%';
+  syncBatchStatus.textContent = `Préparation des lots (${Math.ceil(total / 15)} lots de 15)...`;
+
+  syncCountNew.textContent = '+0';
+  syncCountUpdated.textContent = '0';
+  syncCountFresh.textContent = String(liveStats.fresh);
+  syncCountErrors.textContent = '0';
+
+  syncCurrentAction.textContent = 'Initialisation :';
+  syncCurrentIconName.textContent = targetDiffItems[0].name;
+  syncCurrentCategory.textContent = targetDiffItems[0].category;
+
+  syncLogList.innerHTML = '';
+  syncErrorReportBox.style.display = 'none';
+  btnSyncCancel.style.display = 'flex';
+  btnSyncDone.style.display = 'none';
 
   const BATCH_SIZE = 15;
-  const total = targetDiffItems.length;
 
   try {
     for (let i = 0; i < total; i += BATCH_SIZE) {
@@ -347,15 +495,30 @@ async function startSync(retryList?: FailedIconItem[]) {
       }
 
       const chunk = targetDiffItems.slice(i, i + BATCH_SIZE);
-      progressStatusText.textContent = `Téléchargement du lot ${Math.floor(i / BATCH_SIZE) + 1} / ${Math.ceil(total / BATCH_SIZE)}...`;
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(total / BATCH_SIZE);
+      syncBatchStatus.textContent = `Traitement du lot ${batchNum} / ${totalBatches}...`;
 
-      // Fetch SVGs for all variants in parallel for this batch, collecting errors individually
+      // Actualisation dynamique de la phase courante
+      const hasNewInChunk = chunk.some((c) => c.status === 'new');
+      if (hasNewInChunk) {
+        syncPhaseBadge.textContent = 'Priorité : Icônes manquantes';
+        syncPhaseBadge.className = 'sync-phase-badge';
+      } else {
+        syncPhaseBadge.textContent = 'Mise à jour des icônes';
+        syncPhaseBadge.className = 'sync-phase-badge phase-updates';
+      }
+
+      // Télécharger en parallèle les SVGs pour ce lot
       const batchItems: IconBatchItem[] = [];
 
       await Promise.all(
         chunk.map(async (item) => {
           try {
-            currentIconName.textContent = `Téléchargement : ${item.name}...`;
+            syncCurrentAction.textContent = 'Téléchargement SVG :';
+            syncCurrentIconName.textContent = item.name;
+            syncCurrentCategory.textContent = item.category;
+
             const variants = await fetchIconAllVariants(item.name, styles, includeFill);
             batchItems.push({
               name: item.name,
@@ -366,13 +529,15 @@ async function startSync(retryList?: FailedIconItem[]) {
           } catch (err: unknown) {
             const reason = err instanceof Error ? err.message : String(err);
             console.warn(`[Sync] Failed to fetch icon "${item.name}":`, reason);
-            // Record failure without stopping the rest of the sync!
             failedIcons.push({
               name: item.name,
               category: item.category,
               remoteVersion: item.remoteVersion,
               reason,
             });
+            liveStats.errors++;
+            syncCountErrors.textContent = String(liveStats.errors);
+            appendSyncLog(item.name, item.category, 'error', reason);
           }
         })
       );
@@ -394,7 +559,6 @@ async function startSync(retryList?: FailedIconItem[]) {
           currentBatchResolver = resolve;
         });
 
-        // Send batch to Figma and wait until it is fully written into the page
         sendToFigma({
           type: 'START_SYNC_BATCH',
           payload: {
@@ -403,42 +567,67 @@ async function startSync(retryList?: FailedIconItem[]) {
             isFirst,
             isLast,
             batchIndex: Math.floor(i / BATCH_SIZE),
-            totalBatches: Math.ceil(total / BATCH_SIZE),
+            totalBatches,
             overallTotal: total,
           },
         });
 
         await batchPromise;
       } else if (i + BATCH_SIZE >= total) {
-        // Last batch had no items to write (all failed to download)
         finishSync();
       }
     }
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error('Batch sync loop error:', errorMsg);
-    finishSync();
+    finishSync(errorMsg);
   }
 }
 
-function finishSync() {
+function finishSync(errorMsg?: string) {
   isSyncing = false;
-  shouldCancel = false;
-  btnSyncSpinner.style.display = 'none';
-  btnRefresh.disabled = false;
-  progressBox.style.display = 'none';
-  updateSyncButton();
-  renderErrorReport();
+  currentBatchResolver = null;
+
+  if (shouldCancel) {
+    syncStatusIndicator.className = 'sync-pulsing-dot stopped';
+    syncTitle.textContent = 'Synchronisation interrompue';
+    syncSubtitle.textContent = 'L\'opération a été arrêtée. Les éléments déjà injectés ont été conservés.';
+    syncPhaseBadge.textContent = 'Interrompu';
+    syncPhaseBadge.className = 'sync-phase-badge phase-updates';
+  } else if (errorMsg) {
+    syncStatusIndicator.className = 'sync-pulsing-dot stopped';
+    syncTitle.textContent = 'Erreur de synchronisation';
+    syncSubtitle.textContent = errorMsg;
+    syncPhaseBadge.textContent = 'Erreur';
+    syncPhaseBadge.className = 'sync-phase-badge';
+  } else {
+    syncStatusIndicator.className = 'sync-pulsing-dot success';
+    syncTitle.textContent = 'Synchronisation terminée !';
+    syncSubtitle.textContent = `Opération complétée : +${liveStats.added} nouvelle(s), ${liveStats.updated} mise(s) à jour, ${liveStats.fresh} ignorée(s) car importée(s) il y a moins de 24h.`;
+    syncPhaseBadge.textContent = 'Succès';
+    syncPhaseBadge.className = 'sync-phase-badge phase-done';
+    syncProgressPercent.textContent = '100%';
+    syncProgressBarFill.style.width = '100%';
+  }
+
+  syncCurrentAction.textContent = 'Terminé';
+  syncCurrentIconName.textContent = shouldCancel ? 'Arrêté' : 'Prêt';
+  syncCurrentCategory.textContent = 'Figma';
+
+  btnSyncCancel.style.display = 'none';
+  btnSyncDone.style.display = 'flex';
+
+  renderSyncErrorReport();
 }
 
-function renderErrorReport() {
+function renderSyncErrorReport() {
   if (failedIcons.length === 0) {
-    errorReportBox.style.display = 'none';
+    syncErrorReportBox.style.display = 'none';
     return;
   }
 
-  errorReportCount.textContent = `${failedIcons.length} icône(s) non chargée(s)`;
-  errorReportList.innerHTML = '';
+  syncErrorReportCount.textContent = `${failedIcons.length} icône(s) non chargée(s)`;
+  syncErrorReportList.innerHTML = '';
 
   for (const item of failedIcons) {
     const row = document.createElement('div');
@@ -447,44 +636,47 @@ function renderErrorReport() {
       <span class="error-item-name">${item.name}</span>
       <span class="error-item-category">${item.category}</span>
     `;
-    errorReportList.appendChild(row);
+    syncErrorReportList.appendChild(row);
   }
 
-  errorReportBox.style.display = 'flex';
-  btnRetryText.textContent = `Réessayer (${failedIcons.length})`;
+  syncErrorReportBox.style.display = 'flex';
+  btnSyncRetryErrors.textContent = `Réessayer (${failedIcons.length})`;
 }
 
 // Event Listeners
 btnSync.addEventListener('click', () => startSync());
 
-btnCloseErrorReport.addEventListener('click', () => {
-  errorReportBox.style.display = 'none';
+btnSyncDone.addEventListener('click', () => {
+  syncView.style.display = 'none';
+  loadingView.style.display = 'flex';
+  sendToFigma({ type: 'SCAN_PAGE' });
 });
 
-btnRetryErrors.addEventListener('click', () => {
+btnSyncCancel.addEventListener('click', () => {
+  shouldCancel = true;
+  syncSubtitle.textContent = 'Annulation en cours...';
+  syncStatusIndicator.className = 'sync-pulsing-dot stopped';
+  sendToFigma({ type: 'CANCEL_SYNC' });
+});
+
+btnSyncRetryErrors.addEventListener('click', () => {
   if (failedIcons.length === 0) return;
   const toRetry = [...failedIcons];
   failedIcons = [];
   startSync(toRetry);
 });
 
-btnCopyErrors.addEventListener('click', async () => {
+btnSyncCopyErrors.addEventListener('click', async () => {
   const text = failedIcons.map((i) => i.name).join('\n');
   try {
     await navigator.clipboard.writeText(text);
-    btnCopyErrors.textContent = 'Copié !';
+    btnSyncCopyErrors.textContent = 'Copié !';
     setTimeout(() => {
-      btnCopyErrors.textContent = 'Copier la liste';
+      btnSyncCopyErrors.textContent = 'Copier la liste';
     }, 2000);
   } catch {
     alert(text);
   }
-});
-
-btnCancelSync.addEventListener('click', () => {
-  shouldCancel = true;
-  progressStatusText.textContent = 'Annulation demandée...';
-  sendToFigma({ type: 'CANCEL_SYNC' });
 });
 
 btnRefresh.addEventListener('click', () => {

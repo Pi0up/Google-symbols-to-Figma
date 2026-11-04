@@ -205,6 +205,7 @@ export class LibraryBuilder {
     compSet.setPluginData('icon_name', item.name);
     compSet.setPluginData('icon_version', String(item.version));
     compSet.setPluginData('icon_category', item.category);
+    compSet.setPluginData('icon_imported_at', String(Date.now()));
 
     // Apply Auto Layout to the component set: side-by-side with 4px gap
     this.applyAutoLayoutToComponentSet(compSet);
@@ -244,6 +245,7 @@ export class LibraryBuilder {
 
     compSet.setPluginData('icon_version', String(item.version));
     compSet.setPluginData('icon_category', item.category);
+    compSet.setPluginData('icon_imported_at', String(Date.now()));
 
     return { status: hasUpdatedAny ? 'updated' : 'skipped' };
   }

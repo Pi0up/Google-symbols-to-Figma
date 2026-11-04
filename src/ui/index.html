@@ -44,6 +44,12 @@
         </div>
       </div>
 
+      <!-- Freshness Notice Banner -->
+      <div id="freshnessNotice" class="freshness-notice" style="display: none;">
+        <span class="freshness-icon">⚡</span>
+        <span id="freshnessText">0 icône(s) importée(s) il y a moins de 24h (non rechargées).</span>
+      </div>
+
       <!-- Styles & Variants Configuration -->
       <div class="section-box">
         <div class="section-title">Styles & Variantes (24px)</div>
@@ -144,47 +150,97 @@
         </div>
       </div>
 
-      <!-- Progress Box -->
-      <div id="progressBox" class="progress-box">
-        <div class="progress-header">
-          <span id="progressStatusText">Téléchargement et écriture...</span>
-          <span id="progressPercent">0%</span>
+    </div>
+
+    <!-- Dedicated Synchronization View -->
+    <div id="syncView" class="sync-view" style="display: none;">
+      <!-- Sync Header Card -->
+      <div class="sync-header-card">
+        <div class="sync-title-row">
+          <div class="sync-title-group">
+            <div id="syncStatusIndicator" class="sync-pulsing-dot"></div>
+            <h2 id="syncTitle" class="sync-title">Synchronisation en cours</h2>
+          </div>
+          <span id="syncPhaseBadge" class="sync-phase-badge">Priorité : Nouveautés</span>
         </div>
-        <div class="progress-bar-container">
-          <div id="progressBarFill" class="progress-bar-fill"></div>
+        <div id="syncSubtitle" class="sync-subtitle">Téléchargement et injection directe dans le document...</div>
+      </div>
+
+      <!-- Progress Main Bar -->
+      <div class="sync-progress-card">
+        <div class="sync-progress-top">
+          <span id="syncProgressCount" class="sync-progress-count">0 / 0</span>
+          <span id="syncProgressPercent" class="sync-progress-percent">0%</span>
         </div>
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div id="currentIconName" class="current-icon-name">Préparation...</div>
-          <button id="btnCancelSync" class="btn btn-danger" type="button">Annuler</button>
+        <div class="sync-progress-bar-track">
+          <div id="syncProgressBarFill" class="sync-progress-bar-fill"></div>
+        </div>
+        <div id="syncBatchStatus" class="sync-batch-status">Initialisation des flux vectoriels...</div>
+      </div>
+
+      <!-- Live Counters Grid -->
+      <div class="sync-metrics-grid">
+        <div class="sync-metric-card metric-new">
+          <div id="syncCountNew" class="sync-metric-value">+0</div>
+          <div class="sync-metric-label">Nouveaux</div>
+        </div>
+        <div class="sync-metric-card metric-updated">
+          <div id="syncCountUpdated" class="sync-metric-value">0</div>
+          <div class="sync-metric-label">Mis à jour</div>
+        </div>
+        <div class="sync-metric-card metric-fresh">
+          <div id="syncCountFresh" class="sync-metric-value">0</div>
+          <div class="sync-metric-label">Ignorés (&lt;24h)</div>
+        </div>
+        <div class="sync-metric-card metric-errors">
+          <div id="syncCountErrors" class="sync-metric-value">0</div>
+          <div class="sync-metric-label">Erreurs</div>
         </div>
       </div>
 
-      <!-- Error Report Box (Shown when icons fail to download) -->
-      <div id="errorReportBox" class="error-report-box" style="display: none;">
+      <!-- Current Active Icon Banner -->
+      <div id="syncActiveCard" class="sync-active-card">
+        <div class="sync-active-header">
+          <span class="sync-active-pulse">●</span>
+          <span id="syncCurrentAction">En cours :</span>
+        </div>
+        <div class="sync-active-body">
+          <span id="syncCurrentIconName" class="sync-active-icon-name">Préparation...</span>
+          <span id="syncCurrentCategory" class="sync-active-category">-</span>
+        </div>
+      </div>
+
+      <!-- Live Activity Feed -->
+      <div class="sync-log-container">
+        <div class="sync-log-title">Activité en direct</div>
+        <div id="syncLogList" class="sync-log-list">
+          <!-- Filled dynamically during sync -->
+        </div>
+      </div>
+
+      <!-- Error Report in Sync View (if any errors occur) -->
+      <div id="syncErrorReportBox" class="error-report-box" style="display: none;">
         <div class="error-report-header">
           <div class="error-report-title">
             <span>⚠️</span>
-            <span id="errorReportCount">0 icône(s) non chargée(s)</span>
+            <span id="syncErrorReportCount">0 icône(s) non chargée(s)</span>
           </div>
-          <button id="btnCloseErrorReport" class="btn-link" type="button">Fermer</button>
         </div>
         <div class="error-report-hint">
-          Ces icônes n'ont pas pu être téléchargées, mais le reste de la synchronisation s'est terminé avec succès.
+          Ces icônes n'ont pas pu être téléchargées depuis Google Fonts, mais le reste a été synchronisé avec succès.
         </div>
-        <div id="errorReportList" class="error-report-list">
-          <!-- Populated dynamically -->
-        </div>
+        <div id="syncErrorReportList" class="error-report-list"></div>
         <div class="error-report-actions">
-          <button id="btnRetryErrors" class="btn btn-warning" type="button">
-            <span class="spinner" id="btnRetrySpinner" style="display: none;"></span>
-            <span id="btnRetryText">Réessayer les erreurs</span>
-          </button>
-          <button id="btnCopyErrors" class="btn btn-secondary" type="button">
-            Copier la liste
-          </button>
+          <button id="btnSyncRetryErrors" class="btn btn-warning" type="button">Réessayer les erreurs</button>
+          <button id="btnSyncCopyErrors" class="btn btn-secondary" type="button">Copier la liste</button>
         </div>
       </div>
 
+      <!-- Sync View Bottom Controls -->
+      <div class="sync-actions-row">
+        <button id="btnSyncCancel" class="btn btn-danger" type="button">Annuler la synchronisation</button>
+        <button id="btnSyncDone" class="btn btn-primary" type="button" style="display: none;">← Retour au tableau de bord</button>
+      </div>
     </div>
   </main>
 

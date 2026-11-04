@@ -126,16 +126,6 @@ figma.ui.onmessage = async (msg: UIMessage) => {
           const item = items[i];
           sessionStats.totalProcessed++;
 
-          // Post live progress to UI with overall total
-          postMessage({
-            type: 'SYNC_PROGRESS',
-            payload: {
-              current: sessionStats.totalProcessed,
-              total: overallTotal,
-              iconName: item.name,
-            },
-          });
-
           const result = activeBuilder.upsertIcon(item);
           if (result.status === 'created') {
             sessionStats.added++;
@@ -144,6 +134,18 @@ figma.ui.onmessage = async (msg: UIMessage) => {
             sessionStats.updated++;
             batchUpdated++;
           }
+
+          // Post live progress to UI with overall total and action result
+          postMessage({
+            type: 'SYNC_PROGRESS',
+            payload: {
+              current: sessionStats.totalProcessed,
+              total: overallTotal,
+              iconName: item.name,
+              category: item.category,
+              action: result.status === 'created' ? 'created' : 'updated',
+            },
+          });
 
           // Yield to UI thread every 4 items to keep Figma responsive
           if (i % 4 === 0) {

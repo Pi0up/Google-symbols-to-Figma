@@ -103,6 +103,8 @@ export function scanExistingIcons(): ExistingIconRecord[] {
     const storedCategory = set.getPluginData('icon_category') || 'General';
     const rawVersion = set.getPluginData('icon_version');
     const version = rawVersion ? parseInt(rawVersion, 10) : 0;
+    const rawImportedAt = set.getPluginData('icon_imported_at');
+    const importedAt = rawImportedAt ? parseInt(rawImportedAt, 10) : undefined;
 
     records.push({
       id: set.id,
@@ -110,6 +112,7 @@ export function scanExistingIcons(): ExistingIconRecord[] {
       category: storedCategory,
       version: isNaN(version) ? 0 : version,
       isDeprecated,
+      importedAt: importedAt && !isNaN(importedAt) ? importedAt : undefined,
     });
   }
 
