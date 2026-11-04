@@ -1,0 +1,19 @@
+{
+  "name": "google-icons-to-figma",
+  "version": "1.0.0",
+  "description": "Figma plugin to sync and keep up-to-date Google Material Symbols icons library",
+  "type": "module",
+  "scripts": {
+    "build:code": "vite build --config vite.config.code.ts",
+    "build:ui": "vite build --config vite.config.ui.ts",
+    "build": "npm run build:code && npm run build:ui",
+    "dev:code": "vite build --config vite.config.code.ts --watch",
+    "dev:ui": "vite build --config vite.config.ui.ts --watch"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.106.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0",
+    "vite-plugin-singlefile": "^2.1.0"
+  }
+}
