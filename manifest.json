@@ -1,9 +1,10 @@
 {
   "name": "Google Material Symbols Sync",
-  "id": "google-material-symbols-sync",
+  "id": "1699824861579194730",
   "api": "1.0.0",
   "main": "dist/code.js",
   "ui": "dist/index.html",
+  "documentAccess": "dynamic-page",
   "editorType": [
     "figma"
   ],
