@@ -6,6 +6,9 @@ export async function fetchColorVariables(): Promise<ColorVariableItem[]> {
       return [];
     }
 
+    const results: ColorVariableItem[] = [];
+
+    // 1. Récupération des variables locales
     const [colorVars, collections] = await Promise.all([
       figma.variables.getLocalVariablesAsync('COLOR'),
       figma.variables.getLocalVariableCollectionsAsync(),
@@ -16,11 +19,40 @@ export async function fetchColorVariables(): Promise<ColorVariableItem[]> {
       collectionMap.set(c.id, c.name);
     }
 
-    return colorVars.map((v) => ({
-      id: v.id,
-      name: v.name,
-      collectionName: collectionMap.get(v.variableCollectionId) || 'Variables',
-    }));
+    for (const v of colorVars) {
+      results.push({
+        id: v.id,
+        name: v.name,
+        collectionName: `Locales • ${collectionMap.get(v.variableCollectionId) || 'Variables'}`,
+      });
+    }
+
+    // 2. Récupération des variables provenant de bibliothèques d'équipe activées / liées au document
+    if ('teamLibrary' in figma && figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync) {
+      try {
+        const libraryCollections = await figma.teamLibrary.getAvailableLibraryVariableCollectionsAsync();
+        for (const libCol of libraryCollections) {
+          try {
+            const libVars = await figma.teamLibrary.getVariablesInLibraryCollectionAsync(libCol.key);
+            for (const v of libVars) {
+              if (v.resolvedType === 'COLOR') {
+                results.push({
+                  id: v.key, // Pour une variable de bibliothèque liée, la clé est utilisée pour l'import via importVariableByKeyAsync
+                  name: v.name,
+                  collectionName: `${libCol.libraryName} • ${libCol.name}`,
+                });
+              }
+            }
+          } catch (colErr) {
+            console.warn(`Could not load variables for library collection "${libCol.name}":`, colErr);
+          }
+        }
+      } catch (libErr) {
+        console.warn('Could not load available library variable collections:', libErr);
+      }
+    }
+
+    return results;
   } catch (err) {
     console.warn('Could not fetch local color variables:', err);
     return [];

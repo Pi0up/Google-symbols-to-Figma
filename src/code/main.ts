@@ -73,6 +73,10 @@ figma.ui.onmessage = async (msg: UIMessage) => {
               console.warn('Could not import color variable by key:', varId);
             }
           }
+
+          if (!targetColorVar) {
+            figma.notify('Attention : la variable de couleur sélectionnée n\'a pas pu être résolue ou importée.', { error: true });
+          }
         }
         activeBuilder = new LibraryBuilder(targetColorVar);
         sessionStats = { added: 0, updated: 0, totalProcessed: 0 };
