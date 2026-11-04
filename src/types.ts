@@ -58,6 +58,7 @@ export interface ColorVariableItem {
   id: string;
   name: string;
   collectionName?: string;
+  type?: 'variable' | 'style';
 }
 
 export interface SyncConfig {
@@ -83,6 +84,7 @@ export interface IconBatchItem {
 // Communication messages UI <-> Code
 export type UIMessage =
   | { type: 'SCAN_PAGE' }
+  | { type: 'REFRESH_VARIABLES' }
   | {
       type: 'START_SYNC_BATCH';
       payload: {
@@ -107,6 +109,7 @@ export type PluginMessage =
         colorVariables?: ColorVariableItem[];
       };
     }
+  | { type: 'VARIABLES_LOADED'; payload: { colorVariables: ColorVariableItem[] } }
   | { type: 'SYNC_PROGRESS'; payload: { current: number; total: number; iconName: string } }
   | { type: 'BATCH_COMPLETE'; payload: { batchIndex: number; added: number; updated: number } }
   | { type: 'SYNC_COMPLETE'; payload: { added: number; updated: number; deprecated: number } }

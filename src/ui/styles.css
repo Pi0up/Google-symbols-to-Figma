@@ -182,6 +182,219 @@ body {
   border-color: var(--accent);
 }
 
+/* Token Searchable Combobox */
+.token-picker {
+  position: relative;
+  width: 100%;
+}
+
+.token-picker-trigger {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+}
+
+.token-picker-trigger:hover {
+  border-color: var(--figma-color-border-strong, #b0b0b0);
+}
+
+.token-picker-trigger:focus,
+.token-picker-trigger.open {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.token-picker-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+.token-badge-collection {
+  color: var(--text-secondary);
+  font-size: 10px;
+  margin-left: 5px;
+  font-weight: normal;
+}
+
+.token-picker-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.token-picker-clear {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 12px;
+  line-height: 1;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.token-picker-clear:hover {
+  color: var(--danger);
+}
+
+.token-picker-arrow {
+  font-size: 9px;
+  color: var(--text-secondary);
+  transition: transform 0.15s ease;
+  user-select: none;
+}
+
+.token-picker-trigger.open .token-picker-arrow {
+  transform: rotate(180deg);
+}
+
+.token-picker-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.token-search-wrapper {
+  padding: 6px 8px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.token-search-input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 11px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.token-search-input:focus {
+  border-color: var(--accent);
+}
+
+.token-picker-list {
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.token-group-title {
+  padding: 6px 10px 4px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-bottom: 1px solid var(--border-color);
+  border-top: 1px solid var(--border-color);
+}
+
+.token-group-title:first-child {
+  border-top: none;
+}
+
+.token-item {
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  transition: background 0.1s ease;
+  user-select: none;
+}
+
+.token-item:hover,
+.token-item.focused {
+  background: var(--bg-secondary);
+}
+
+.token-item.selected {
+  background: var(--bg-tertiary);
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.token-item-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.token-item-tag {
+  font-size: 9px;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  padding: 1px 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.token-item.selected .token-item-tag {
+  background: var(--bg-primary);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.token-item-special {
+  color: var(--accent);
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.token-item-special:hover {
+  background: var(--bg-tertiary);
+}
+
+.token-empty-message {
+  padding: 14px 10px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: center;
+  font-style: italic;
+}
+
 /* Form Controls */
 .checkbox-group {
   display: flex;

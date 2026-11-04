@@ -35,8 +35,14 @@ const checkRounded = document.getElementById('checkRounded') as HTMLInputElement
 const checkSharp = document.getElementById('checkSharp') as HTMLInputElement;
 const checkFill = document.getElementById('checkFill') as HTMLInputElement;
 
-const colorVariableSelect = document.getElementById('colorVariableSelect') as HTMLSelectElement;
 const customVariableInput = document.getElementById('customVariableInput') as HTMLInputElement;
+const tokenPicker = document.getElementById('tokenPicker') as HTMLElement;
+const tokenPickerTrigger = document.getElementById('tokenPickerTrigger') as HTMLElement;
+const tokenPickerSelectedLabel = document.getElementById('tokenPickerSelectedLabel') as HTMLElement;
+const btnTokenClear = document.getElementById('btnTokenClear') as HTMLButtonElement;
+const tokenPickerDropdown = document.getElementById('tokenPickerDropdown') as HTMLElement;
+const tokenSearchInput = document.getElementById('tokenSearchInput') as HTMLInputElement;
+const tokenPickerList = document.getElementById('tokenPickerList') as HTMLElement;
 
 // Error report elements
 const errorReportBox = document.getElementById('errorReportBox') as HTMLElement;
@@ -117,6 +123,13 @@ window.onmessage = (event) => {
         populateColorVariables(msg.payload.colorVariables);
       }
       renderDashboard();
+      break;
+    }
+
+    case 'VARIABLES_LOADED': {
+      if (msg.payload.colorVariables) {
+        populateColorVariables(msg.payload.colorVariables);
+      }
       break;
     }
 
@@ -503,57 +516,219 @@ document.querySelectorAll<HTMLInputElement>('input[name="syncScope"]').forEach((
   radio.addEventListener('change', updateSyncButton);
 });
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+let availableTokens: ColorVariableItem[] = [];
+let selectedTokenId: string | undefined = undefined;
+let isCustomTokenSelected = false;
+
 function populateColorVariables(variables: ColorVariableItem[]) {
-  const currentVal = colorVariableSelect.value;
-  colorVariableSelect.innerHTML = '<option value="">Aucune variable (couleur par défaut #1C1C1E)</option>';
+  availableTokens = variables || [];
+  const hintEl = document.getElementById('variableCountHint');
 
-  if (variables && variables.length > 0) {
+  if (availableTokens.length > 0) {
+    if (hintEl) {
+      hintEl.innerHTML = `<span style="color: var(--success, #34c759)">✓ ${availableTokens.length} token(s) disponible(s)</span>`;
+    }
+  } else {
+    if (hintEl) {
+      hintEl.innerHTML = `<span style="color: var(--text-secondary)">ℹ️ 0 token détecté. Si vos variables sont dans un autre fichier, vérifiez que la bibliothèque est bien publiée et activée dans <strong>Assets > Libraries</strong> (icône livre 📚).</span>`;
+    }
+  }
+
+  // Restore selection if previously selected token is still in list
+  if (selectedTokenId && !isCustomTokenSelected) {
+    const found = availableTokens.find((t) => t.id === selectedTokenId);
+    if (found) {
+      updateTriggerLabel(found);
+    } else {
+      selectNone();
+    }
+  }
+}
+
+function updateTriggerLabel(token: ColorVariableItem | null) {
+  if (token) {
+    tokenPickerSelectedLabel.innerHTML = `<strong>${escapeHtml(token.name)}</strong><span class="token-badge-collection">(${escapeHtml(token.collectionName || 'Variables')})</span>`;
+    btnTokenClear.style.display = 'inline-flex';
+  } else if (isCustomTokenSelected) {
+    tokenPickerSelectedLabel.innerHTML = '✏️ <em>Valeur personnalisée...</em>';
+    btnTokenClear.style.display = 'inline-flex';
+  } else {
+    tokenPickerSelectedLabel.textContent = 'Aucune variable (couleur par défaut #1C1C1E)';
+    btnTokenClear.style.display = 'none';
+  }
+}
+
+function selectToken(token: ColorVariableItem) {
+  selectedTokenId = token.id;
+  isCustomTokenSelected = false;
+  updateTriggerLabel(token);
+  customVariableInput.style.display = 'none';
+  closeTokenDropdown();
+}
+
+function selectNone() {
+  selectedTokenId = undefined;
+  isCustomTokenSelected = false;
+  updateTriggerLabel(null);
+  customVariableInput.style.display = 'none';
+  closeTokenDropdown();
+}
+
+function selectCustom() {
+  selectedTokenId = undefined;
+  isCustomTokenSelected = true;
+  updateTriggerLabel(null);
+  customVariableInput.style.display = 'block';
+  customVariableInput.focus();
+  closeTokenDropdown();
+}
+
+function openTokenDropdown() {
+  tokenPickerTrigger.classList.add('open');
+  tokenPickerDropdown.style.display = 'flex';
+  tokenSearchInput.value = '';
+  renderTokenPickerList('');
+  setTimeout(() => tokenSearchInput.focus(), 25);
+}
+
+function closeTokenDropdown() {
+  tokenPickerTrigger.classList.remove('open');
+  tokenPickerDropdown.style.display = 'none';
+}
+
+function toggleTokenDropdown() {
+  if (tokenPickerDropdown.style.display === 'none') {
+    openTokenDropdown();
+  } else {
+    closeTokenDropdown();
+  }
+}
+
+function renderTokenPickerList(query: string) {
+  tokenPickerList.innerHTML = '';
+  const cleanQ = query.trim().toLowerCase();
+
+  // Option 1: None / Default
+  const noneItem = document.createElement('div');
+  noneItem.className = `token-item ${!selectedTokenId && !isCustomTokenSelected ? 'selected' : ''}`;
+  noneItem.innerHTML = `<span class="token-item-name">Aucune variable (couleur par défaut #1C1C1E)</span>`;
+  noneItem.addEventListener('click', () => selectNone());
+  tokenPickerList.appendChild(noneItem);
+
+  // Filter tokens by name or collection
+  const filtered = cleanQ
+    ? availableTokens.filter(
+        (t) =>
+          t.name.toLowerCase().includes(cleanQ) ||
+          (t.collectionName && t.collectionName.toLowerCase().includes(cleanQ))
+      )
+    : availableTokens;
+
+  if (filtered.length > 0) {
     const byCollection = new Map<string, ColorVariableItem[]>();
-    for (const v of variables) {
-      const coll = v.collectionName || 'Variables';
+    for (const t of filtered) {
+      const coll = t.collectionName || 'Variables';
       if (!byCollection.has(coll)) byCollection.set(coll, []);
-      byCollection.get(coll)!.push(v);
+      byCollection.get(coll)!.push(t);
     }
 
-    for (const [collName, vars] of byCollection.entries()) {
-      const group = document.createElement('optgroup');
-      group.label = collName;
-      for (const v of vars) {
-        const opt = document.createElement('option');
-        opt.value = v.id;
-        opt.textContent = v.name;
-        group.appendChild(opt);
+    for (const [collName, tokens] of byCollection.entries()) {
+      const groupHeader = document.createElement('div');
+      groupHeader.className = 'token-group-title';
+      groupHeader.textContent = `${collName} (${tokens.length})`;
+      tokenPickerList.appendChild(groupHeader);
+
+      for (const token of tokens) {
+        const itemEl = document.createElement('div');
+        const isSelected = selectedTokenId === token.id;
+        itemEl.className = `token-item ${isSelected ? 'selected' : ''}`;
+        itemEl.innerHTML = `
+          <span class="token-item-name" title="${escapeHtml(token.name)}">${escapeHtml(token.name)}</span>
+          <span class="token-item-tag">${token.type === 'style' ? 'Style' : 'Var'}</span>
+        `;
+        itemEl.addEventListener('click', () => selectToken(token));
+        tokenPickerList.appendChild(itemEl);
       }
-      colorVariableSelect.appendChild(group);
     }
+  } else if (cleanQ) {
+    const emptyEl = document.createElement('div');
+    emptyEl.className = 'token-empty-message';
+    emptyEl.textContent = `Aucun token ne correspond à "${query}"`;
+    tokenPickerList.appendChild(emptyEl);
   }
 
-  const customOpt = document.createElement('option');
-  customOpt.value = '__custom__';
-  customOpt.textContent = '✏️ Saisir un ID ou une clé personnalisée...';
-  colorVariableSelect.appendChild(customOpt);
-
-  if (currentVal && colorVariableSelect.querySelector(`option[value="${currentVal}"]`)) {
-    colorVariableSelect.value = currentVal;
-  }
+  // Option 2: Custom ID / key
+  const customItem = document.createElement('div');
+  customItem.className = `token-item token-item-special ${isCustomTokenSelected ? 'selected' : ''}`;
+  customItem.innerHTML = `<span class="token-item-name">✏️ Saisir un ID ou une clé personnalisée...</span>`;
+  customItem.addEventListener('click', () => selectCustom());
+  tokenPickerList.appendChild(customItem);
 }
 
 function getSelectedColorVariableId(): string | undefined {
-  if (colorVariableSelect.value === '__custom__') {
+  if (isCustomTokenSelected) {
     const val = customVariableInput.value.trim();
     return val || undefined;
   }
-  return colorVariableSelect.value || undefined;
+  return selectedTokenId;
 }
 
-colorVariableSelect.addEventListener('change', () => {
-  if (colorVariableSelect.value === '__custom__') {
-    customVariableInput.style.display = 'block';
-    customVariableInput.focus();
-  } else {
-    customVariableInput.style.display = 'none';
+// Token picker listeners
+tokenPickerTrigger.addEventListener('click', (e) => {
+  if ((e.target as HTMLElement).closest('#btnTokenClear')) {
+    return;
+  }
+  toggleTokenDropdown();
+});
+
+tokenPickerTrigger.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+    e.preventDefault();
+    openTokenDropdown();
   }
 });
+
+btnTokenClear.addEventListener('click', (e) => {
+  e.stopPropagation();
+  selectNone();
+});
+
+tokenSearchInput.addEventListener('input', () => {
+  renderTokenPickerList(tokenSearchInput.value);
+});
+
+tokenSearchInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeTokenDropdown();
+    tokenPickerTrigger.focus();
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if (!tokenPicker.contains(e.target as Node)) {
+    closeTokenDropdown();
+  }
+});
+
+const btnRefreshVariables = document.getElementById('btnRefreshVariables');
+if (btnRefreshVariables) {
+  btnRefreshVariables.addEventListener('click', () => {
+    const hintEl = document.getElementById('variableCountHint');
+    if (hintEl) {
+      hintEl.innerHTML = '<span style="color: var(--text-secondary)">Scan des tokens en cours...</span>';
+    }
+    sendToFigma({ type: 'REFRESH_VARIABLES' });
+  });
+}
 
 // Kick off
 init();

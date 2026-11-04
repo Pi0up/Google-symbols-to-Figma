@@ -4,9 +4,11 @@ export class LibraryBuilder {
   private categoryFrames = new Map<string, FrameNode>();
   private nextCategoryX = 0;
   private targetColorVariable: Variable | null = null;
+  private targetPaintStyle: PaintStyle | null = null;
 
-  constructor(targetColorVariable?: Variable | null) {
+  constructor(targetColorVariable?: Variable | null, targetPaintStyle?: PaintStyle | null) {
     this.targetColorVariable = targetColorVariable || null;
+    this.targetPaintStyle = targetPaintStyle || null;
     this.discoverExistingCategories();
   }
 
@@ -300,7 +302,13 @@ export class LibraryBuilder {
         existingVector.x = (24 - targetW) / 2;
         existingVector.y = (24 - targetH) / 2;
 
-        if (this.targetColorVariable && 'variables' in figma && figma.variables.setBoundVariableForPaint && 'fills' in existingVector) {
+        if (this.targetPaintStyle && 'fillStyleId' in existingVector) {
+          try {
+            existingVector.fillStyleId = this.targetPaintStyle.id;
+          } catch (e) {
+            console.warn('Failed to bind paint style on update:', e);
+          }
+        } else if (this.targetColorVariable && 'variables' in figma && figma.variables.setBoundVariableForPaint && 'fills' in existingVector) {
           try {
             const solidPaint: SolidPaint = { type: 'SOLID', color: { r: 0.11, g: 0.11, b: 0.12 } };
             const boundPaint = figma.variables.setBoundVariableForPaint(
@@ -394,8 +402,14 @@ export class LibraryBuilder {
         child.y = offsetY + (origY - minY) * scale;
       }
 
-      // Apply color variable if specified, otherwise preserve fills or set default fill
-      if (this.targetColorVariable && 'variables' in figma && figma.variables.setBoundVariableForPaint) {
+      // Apply color variable or paint style if specified, otherwise preserve fills or set default fill
+      if (this.targetPaintStyle && 'fillStyleId' in child) {
+        try {
+          child.fillStyleId = this.targetPaintStyle.id;
+        } catch (e) {
+          console.warn('Failed to bind paint style to fill:', e);
+        }
+      } else if (this.targetColorVariable && 'variables' in figma && figma.variables.setBoundVariableForPaint) {
         try {
           const solidPaint: SolidPaint = { type: 'SOLID', color: { r: 0.11, g: 0.11, b: 0.12 } };
           const boundPaint = figma.variables.setBoundVariableForPaint(

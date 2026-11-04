@@ -7,6 +7,9 @@
   "editorType": [
     "figma"
   ],
+  "permissions": [
+    "teamlibrary"
+  ],
   "networkAccess": {
     "allowedDomains": [
       "https://fonts.google.com",
