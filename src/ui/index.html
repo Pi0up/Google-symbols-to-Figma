@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Google Material Symbols Sync</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="brand">
+      <div class="brand-icon">G</div>
+      <div class="brand-title">Material Symbols</div>
+    </div>
+    <div id="pageBadge" class="page-badge">Page: ...</div>
+  </header>
+
+  <main class="content">
+    <!-- Initial Loading State -->
+    <div id="loadingView" class="loading-state">
+      <div class="loading-spinner-large"></div>
+      <div>Analyse du fichier et récupération de Google Fonts...</div>
+    </div>
+
+    <!-- Dashboard Content (Hidden until loaded) -->
+    <div id="dashboardView" style="display: none; flex-direction: column; gap: 14px;">
+      
+      <!-- Stats Diff Cards -->
+      <div class="stats-grid">
+        <div class="stat-card new">
+          <div id="statNew" class="stat-value">0</div>
+          <div class="stat-label">Nouveaux</div>
+        </div>
+        <div class="stat-card modified">
+          <div id="statModified" class="stat-value">0</div>
+          <div class="stat-label">Modifiés</div>
+        </div>
+        <div class="stat-card up-to-date">
+          <div id="statUpToDate" class="stat-value">0</div>
+          <div class="stat-label">À jour</div>
+        </div>
+        <div class="stat-card deprecated">
+          <div id="statDeprecated" class="stat-value">0</div>
+          <div class="stat-label">Dépréciés</div>
+        </div>
+      </div>
+
+      <!-- Styles & Variants Configuration -->
+      <div class="section-box">
+        <div class="section-title">Styles & Variantes (24px)</div>
+        <div class="checkbox-group" style="margin-bottom: 10px;">
+          <label class="custom-checkbox">
+            <input type="checkbox" id="checkOutlined" checked />
+            <span>Outlined</span>
+          </label>
+          <label class="custom-checkbox">
+            <input type="checkbox" id="checkRounded" />
+            <span>Rounded</span>
+          </label>
+          <label class="custom-checkbox">
+            <input type="checkbox" id="checkSharp" />
+            <span>Sharp</span>
+          </label>
+        </div>
+        <label class="custom-checkbox">
+          <input type="checkbox" id="checkFill" checked />
+          <span>Générer les 2 états Fill (Fill=False et Fill=True)</span>
+        </label>
+      </div>
+
+      <!-- Color Variable Option (Optional) -->
+      <div class="section-box">
+        <div class="section-header-row">
+          <div class="section-title" style="margin-bottom: 0;">Variable de couleur</div>
+          <span class="badge-optional">Optionnel</span>
+        </div>
+        <p class="section-hint" style="margin-top: 4px; margin-bottom: 8px;">
+          Lier une variable de couleur Figma aux icônes importées ou mises à jour.
+        </p>
+        <select id="colorVariableSelect" class="select-input">
+          <option value="">Aucune variable (couleur par défaut #1C1C1E)</option>
+        </select>
+        <input
+          type="text"
+          id="customVariableInput"
+          class="search-input"
+          placeholder="Coller l'ID ou la clé de la variable (ex: VariableID:...)"
+          style="display: none; margin-top: 6px; margin-bottom: 0;"
+        />
+      </div>
+
+      <!-- Categories Filter -->
+      <div class="section-box">
+        <div class="category-filter-header">
+          <div class="section-title" style="margin-bottom: 0;">Catégories à synchroniser</div>
+          <div class="category-actions">
+            <button id="btnSelectAllCats" class="btn-link" type="button">Toutes</button>
+            <span style="color: var(--border-color)">|</span>
+            <button id="btnDeselectAllCats" class="btn-link" type="button">Aucune</button>
+          </div>
+        </div>
+        <input type="text" id="categorySearch" class="search-input" placeholder="Filtrer les catégories..." />
+        <div id="categoryList" class="category-list">
+          <!-- Filled dynamically by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Synchronization Scope Selector -->
+      <div class="section-box">
+        <div class="section-title">Portée de la mise à jour</div>
+        <div class="sync-mode-selector">
+          <label class="radio-label">
+            <input type="radio" name="syncScope" value="updates_only" checked />
+            <span>Uniquement les nouveautés et modifications (Recommandé)</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="syncScope" value="all_selected" />
+            <span>Forcer la synchronisation de toutes les icônes sélectionnées</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Progress Box -->
+      <div id="progressBox" class="progress-box">
+        <div class="progress-header">
+          <span id="progressStatusText">Téléchargement et écriture...</span>
+          <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-bar-container">
+          <div id="progressBarFill" class="progress-bar-fill"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div id="currentIconName" class="current-icon-name">Préparation...</div>
+          <button id="btnCancelSync" class="btn btn-danger" type="button">Annuler</button>
+        </div>
+      </div>
+
+      <!-- Error Report Box (Shown when icons fail to download) -->
+      <div id="errorReportBox" class="error-report-box" style="display: none;">
+        <div class="error-report-header">
+          <div class="error-report-title">
+            <span>⚠️</span>
+            <span id="errorReportCount">0 icône(s) non chargée(s)</span>
+          </div>
+          <button id="btnCloseErrorReport" class="btn-link" type="button">Fermer</button>
+        </div>
+        <div class="error-report-hint">
+          Ces icônes n'ont pas pu être téléchargées, mais le reste de la synchronisation s'est terminé avec succès.
+        </div>
+        <div id="errorReportList" class="error-report-list">
+          <!-- Populated dynamically -->
+        </div>
+        <div class="error-report-actions">
+          <button id="btnRetryErrors" class="btn btn-warning" type="button">
+            <span class="spinner" id="btnRetrySpinner" style="display: none;"></span>
+            <span id="btnRetryText">Réessayer les erreurs</span>
+          </button>
+          <button id="btnCopyErrors" class="btn btn-secondary" type="button">
+            Copier la liste
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    <button id="btnSync" class="btn btn-primary" type="button" disabled>
+      <span id="btnSyncSpinner" class="spinner" style="display: none;"></span>
+      <span id="btnSyncText">Synchroniser</span>
+    </button>
+    <button id="btnRefresh" class="btn btn-secondary" type="button">
+      Rafraîchir l'analyse
+    </button>
+  </footer>
+
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>

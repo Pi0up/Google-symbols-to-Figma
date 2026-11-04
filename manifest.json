@@ -1,0 +1,18 @@
+{
+  "name": "Google Material Symbols Sync",
+  "id": "google-material-symbols-sync",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/index.html",
+  "editorType": [
+    "figma"
+  ],
+  "networkAccess": {
+    "allowedDomains": [
+      "https://fonts.google.com",
+      "https://cdn.jsdelivr.net",
+      "https://raw.githubusercontent.com"
+    ],
+    "reasoning": "Fetch Google Fonts Material Symbols metadata and SVG icon files directly from official repositories and CDN."
+  }
+}
